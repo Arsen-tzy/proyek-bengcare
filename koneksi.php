@@ -34,42 +34,44 @@ function isCustomerLoggedIn() {
 }
 
 
-function uploadImage($file, $target_dir = "../assets/img/") {
+// Fungsi untuk upload file tipe kendaraan kustom
+function uploadFile($file, $target_dir = "../assets/") {
     if (!file_exists($target_dir)) {
         mkdir($target_dir, 0777, true);
     }
-
+    
+    $target_file = $target_dir . basename($file["name"]);
     $uploadOk = 1;
-    $imageFileType = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
+    $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
     
-    $check = getimagesize($file["tmp_name"]);
-    if($check === false) {
-        return array('success' => false, 'message' => 'File yang diupload bukan gambar.');
+    // Cek apakah file adalah gambar
+    if (isset($_POST["submit"]) || isset($_POST["simpan"])) {
+        $check = getimagesize($file["tmp_name"]);
+        if ($check !== false) {
+            $uploadOk = 1;
+        } else {
+            return array('success' => false, 'message' => 'File bukan gambar.');
+        }
     }
     
-    if ($file["size"] > 2000000) {
-        return array('success' => false, 'message' => 'File terlalu besar. Maksimal 2MB.');
+    // Cek ukuran file (max 5MB)
+    if ($file["size"] > 5000000) {
+        return array('success' => false, 'message' => 'File terlalu besar. Maksimal 5MB.');
     }
     
-    if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
-        return array('success' => false, 'message' => 'Hanya format JPG, JPEG, dan PNG yang diizinkan.');
+    // Hanya allow format tertentu
+    if ($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg" && $imageFileType != "gif") {
+        return array('success' => false, 'message' => 'Hanya format JPG, JPEG, PNG & GIF yang diizinkan.');
     }
     
-    $new_filename = uniqid('bengcare_') . '.' . $imageFileType;
+    // Generate nama file unik
+    $new_filename = uniqid() . '.' . $imageFileType;
     $target_file = $target_dir . $new_filename;
     
     if (move_uploaded_file($file["tmp_name"], $target_file)) {
         return array('success' => true, 'filename' => $new_filename);
     } else {
-        return array('success' => false, 'message' => 'Terjadi kesalahan sistem saat mengupload gambar.');
+        return array('success' => false, 'message' => 'Error saat upload file.');
     }
-}
-
-function deleteImage($filename, $dir = "../assets/img/") {
-    if ($filename && file_exists($dir . $filename)) {
-        unlink($dir . $filename);
-        return true;
-    }
-    return false;
 }
 ?>

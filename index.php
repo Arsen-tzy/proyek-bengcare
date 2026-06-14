@@ -7,15 +7,27 @@ include "koneksi.php";
 // Deteksi status login untuk menentukan tombol dan tujuan arah (redirect)
 $is_logged_in = false;
 $link_tujuan = "login.php"; // Default jika belum login
+$q_riwayat = null;
 
 if (isset($_SESSION['kode']) || isset($_SESSION['id_karyawan'])) {
     // Jika Karyawan/Admin yang login
     $is_logged_in = true;
     $link_tujuan = "home/index.php"; 
 } elseif (isset($_SESSION['id_customer'])) {
-    // Jika Customer yang login (UBAH BARIS BAWAH INI)
+    // Jika Customer yang login
     $is_logged_in = true;
-    $link_tujuan = "customer/booking.php"; // <-- Mengarah ke folder customer
+    $link_tujuan = "customer/booking.php"; 
+    
+    // Ambil data riwayat pesanan singkat untuk landing page
+    $id_customer = $_SESSION['id_customer'];
+    $q_riwayat = mysqli_query($conn, "
+        SELECT p.*, k.merk, k.tipe, k.jenis 
+        FROM pemesanan p 
+        LEFT JOIN kendaraan k ON p.kendaraan_id = k.id 
+        WHERE p.customer_id = '$id_customer' 
+        ORDER BY p.tanggal DESC 
+        LIMIT 3
+    ");
 }
 ?>
 
@@ -159,46 +171,93 @@ if (isset($_SESSION['kode']) || isset($_SESSION['id_karyawan'])) {
                     <div class="card border-0 mx-auto" style="background-color: #ffffff; border-radius: 20px; max-width: 420px; box-shadow: 0 15px 35px rgba(37, 84, 152, 0.15);">
                         <div class="card-body p-4 text-start">
                     
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h5 class="fw-bold mb-0" style="color: #112A46; font-family: 'Plus Jakarta Sans', sans-serif;">Layanan Populer</h5>
-                            </div>
+                            <?php if (isset($_SESSION['id_customer']) && $q_riwayat !== null): ?>
+                                <!-- JIKA CUSTOMER SUDAH LOGIN: Tampilkan Riwayat Servis Singkat -->
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0" style="color: #112A46; font-family: 'Plus Jakarta Sans', sans-serif;">Riwayat Servis Anda</h5>
+                                    <a href="customer/riwayat.php" class="text-blue text-decoration-none fw-bold small">Lihat Semua</a>
+                                </div>
 
-                            <div class="d-flex align-items-center p-3 mb-3" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-                                <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px;">
-                                    <i class="bi bi-droplet-half fs-5" style="color: #255498;"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="fw-bold mb-1" style="color: #112A46;">Ganti Oli Mesin</h6>
-                                    <span class="fw-bold" style="color: #112A46;">Rp 75.000</span>
-                                </div>
-                                <div class="text-muted small fw-medium">30 menit</div>
-                            </div>
+                                <?php if (mysqli_num_rows($q_riwayat) > 0): ?>
+                                    <?php while($row = mysqli_fetch_assoc($q_riwayat)): ?>
+                                        <?php
+                                            $badge_class = match($row['status']) {
+                                                'selesai' => 'bg-success',
+                                                'batal'   => 'bg-danger',
+                                                default   => 'bg-warning text-dark',
+                                            };
+                                            $status_label = match($row['status']) {
+                                                'selesai' => 'Selesai',
+                                                'batal'   => 'Batal',
+                                                default   => 'Antrian',
+                                            };
+                                            $icon = (strtolower($row['jenis'] ?? '') === 'mobil') ? 'bi-car-front' : 'bi-bicycle';
+                                        ?>
+                                        <div class="d-flex align-items-center p-3 mb-3" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px;">
+                                            <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px; color: #255498;">
+                                                <i class="bi <?= $icon ?> fs-5"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="fw-bold mb-1 text-truncate" style="color: #112A46; max-width: 160px;"><?= htmlspecialchars($row['merk'] . ' ' . $row['tipe']) ?></h6>
+                                                <span class="small text-muted"><?= date('d M Y', strtotime($row['tanggal'])) ?></span>
+                                            </div>
+                                            <span class="badge <?= $badge_class ?> rounded-pill px-2.5 py-1.5 small"><?= $status_label ?></span>
+                                        </div>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <div class="text-center py-4 text-muted">
+                                        <i class="bi bi-clock-history d-block fs-1 mb-2" style="opacity: 0.4;"></i>
+                                        Belum ada riwayat pesanan servis.
+                                    </div>
+                                <?php endif; ?>
 
-                            <div class="d-flex align-items-center p-3 mb-3" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-                                <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px;">
-                                    <i class="bi bi-gear-wide-connected fs-5" style="color: #255498;"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="fw-bold mb-1" style="color: #112A46;">Tune Up Motor</h6>
-                                    <span class="fw-bold" style="color: #112A46;">Rp 100.000</span>
-                                </div>
-                                <div class="text-muted small fw-medium">1 jam</div>
-                            </div>
+                                <a href="customer/booking.php" class="btn w-100 fw-bold py-3 mt-2" style="background-color: #255498; color: white; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#1a3c6d'" onmouseout="this.style.backgroundColor='#255498'">
+                                    Buat Booking Baru &rarr;
+                                </a>
 
-                            <div class="d-flex align-items-center p-3 mb-4" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-                                <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px;">
-                                    <i class="bi bi-record-circle fs-5" style="color: #255498;"></i>
+                            <?php else: ?>
+                                <!-- JIKA BELUM LOGIN / STAFF: Tampilkan Layanan Populer -->
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0" style="color: #112A46; font-family: 'Plus Jakarta Sans', sans-serif;">Layanan Populer</h5>
                                 </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="fw-bold mb-1" style="color: #112A46;">Ganti Ban Motor</h6>
-                                    <span class="fw-bold" style="color: #112A46;">Rp 150.000</span>
-                                </div>
-                                <div class="text-muted small fw-medium">30 menit</div>
-                            </div>
 
-                            <a href="<?= $link_tujuan ?>" class="btn w-100 fw-bold py-3" style="background-color: #255498; color: white; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#1a3c6d'" onmouseout="this.style.backgroundColor='#255498'">
-                                Mulai Pesan &rarr;
-                            </a>
+                                <div class="d-flex align-items-center p-3 mb-3" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                                    <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px;">
+                                        <i class="bi bi-droplet-half fs-5" style="color: #255498;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1" style="color: #112A46;">Ganti Oli Mesin</h6>
+                                        <span class="fw-bold" style="color: #112A46;">Rp 75.000</span>
+                                    </div>
+                                    <div class="text-muted small fw-medium">30 menit</div>
+                                </div>
+
+                                <div class="d-flex align-items-center p-3 mb-3" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                                    <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px;">
+                                        <i class="bi bi-gear-wide-connected fs-5" style="color: #255498;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1" style="color: #112A46;">Tune Up Motor</h6>
+                                        <span class="fw-bold" style="color: #112A46;">Rp 100.000</span>
+                                    </div>
+                                    <div class="text-muted small fw-medium">1 jam</div>
+                                </div>
+
+                                <div class="d-flex align-items-center p-3 mb-4" style="background-color: #F4F8FF; border: 1px solid #E2EAF4; border-radius: 16px; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                                    <div class="d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background-color: #BDD9FF; border-radius: 12px;">
+                                        <i class="bi bi-record-circle fs-5" style="color: #255498;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1" style="color: #112A46;">Ganti Ban Motor</h6>
+                                        <span class="fw-bold" style="color: #112A46;">Rp 150.000</span>
+                                    </div>
+                                    <div class="text-muted small fw-medium">30 menit</div>
+                                </div>
+
+                                <a href="<?= $link_tujuan ?>" class="btn w-100 fw-bold py-3" style="background-color: #255498; color: white; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#1a3c6d'" onmouseout="this.style.backgroundColor='#255498'">
+                                    Mulai Pesan &rarr;
+                                </a>
+                            <?php endif; ?>
 
                         </div>
                     </div>

@@ -10,17 +10,15 @@ if (isset($_SESSION['id_karyawan']) || isset($_SESSION['kode'])) {
     header("Location: home/index.php");
     exit();
 } 
-// Jika Customer sudah login, arahkan ke Menu Booking
+// Jika Customer sudah login, arahkan ke Landing Page
 elseif (isset($_SESSION['id_customer'])) {
-    header("Location: customer/booking.php");
+    header("Location: index.php");
     exit();
 }
 
 $error = "";
 
-// ==========================================
-// 1. PROSES LOGIN CUSTOMER
-// ==========================================
+// 1. PROSES LOGIN CUSTOMER//
 if (isset($_POST['login_customer'])) {
     $email = mysqli_real_escape_string($conn, trim(strtolower($_POST['email'])));
     $password = $_POST['password'];
@@ -35,7 +33,7 @@ if (isset($_POST['login_customer'])) {
             $_SESSION['nama'] = $user['nama'];
             
             // CUSTOMER DIARAHKAN KE SINI
-            header("Location: customer/booking.php");
+            header("Location: index.php");
             exit();
         } else {
             $error = "Password Customer salah!";
@@ -45,9 +43,7 @@ if (isset($_POST['login_customer'])) {
     }
 }
 
-// ==========================================
 // 2. PROSES LOGIN KARYAWAN (STAFF)
-// ==========================================
 if (isset($_POST['login_staff'])) {
     $id_karyawan = mysqli_real_escape_string($conn, trim(strtoupper($_POST['id_karyawan'])));
     $password = $_POST['password'];
@@ -58,13 +54,11 @@ if (isset($_POST['login_staff'])) {
     if (mysqli_num_rows($r_karyawan) > 0) {
         $user = mysqli_fetch_assoc($r_karyawan);
         if ($password === $user['sandi']) {
-            // Set session (aku tambahkan session 'kode' agar cocok dengan dashboardmu)
             $_SESSION['id_karyawan'] = $user['id'];
             $_SESSION['kode'] = $user['kode']; 
             $_SESSION['nama'] = $user['nama'];
             $_SESSION['role'] = $user['role'];
             
-            // KARYAWAN DIARAHKAN KE SINI
             header("Location: home/index.php");
             exit();
         } else {
@@ -117,8 +111,6 @@ if (isset($_POST['login_staff'])) {
             text-align: center;
             margin-bottom: 20px;
         }
-
-        /* Tampilan Role Switcher (Tab) */
         .auth-role-row {
             display: flex;
             gap: 8px;
@@ -220,9 +212,7 @@ if (isset($_POST['login_staff'])) {
                 <i class="bi bi-eye-slash" onclick="togglePass('passCust', this)" style="cursor: pointer;"></i>
             </div>
 
-            <!-- <div class="text-center mt-2 mb-3">
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">Akun Demo: rizky@mail.com / pass123</span>
-            </div> -->
+            
 
             <button type="submit" name="login_customer" class="btn-submit">Sign In Customer</button>
         </form>
@@ -240,10 +230,6 @@ if (isset($_POST['login_staff'])) {
                 <input type="password" name="password" id="passStaff" class="auth-input" placeholder="Password Karyawan" required>
                 <i class="bi bi-eye-slash" onclick="togglePass('passStaff', this)" style="cursor: pointer;"></i>
             </div>
-
-            <!-- <div class="text-center mt-2 mb-3">
-                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">Akun Demo: KRY001 / admin123</span>
-            </div> -->
 
             <button type="submit" name="login_staff" class="btn-submit">Sign In Karyawan</button>
         </form>
